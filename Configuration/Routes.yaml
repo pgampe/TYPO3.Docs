@@ -1,0 +1,29 @@
+#                                                                        #
+# Default routes configuration for the Welcome package                   #
+#                                                                        #
+
+-
+  name: 'Docs with action'
+  uriPattern: '{@action}'
+  defaults:
+    '@package':    'TYPO3.Docs'
+    '@controller': 'Standard'
+#    '@format':     'html'
+
+-
+  name: 'Docs'
+  uriPattern: ''
+  defaults:
+    '@package':    'TYPO3.Docs'
+    '@controller': 'Standard'
+    '@action':     'index'
+    '@format':     'html'
+
+#-
+#  name: 'Redirect to main screen'
+#  uriPattern: ''
+#  defaults:
+#    '@package':    'TYPO3.Docs'
+#    '@controller': 'Standard'
+#    '@action':     'redirect'
+#    '@format':     'html'
