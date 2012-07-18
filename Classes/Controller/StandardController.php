@@ -22,32 +22,43 @@ class StandardController extends \TYPO3\FLOW3\Mvc\Controller\ActionController {
 	protected $documentationRenderingController;
 
 	/**
+	 * Index action
+	 *
+	 * @return void
+	 */
+	public function indexAction() {
+		#$message = \TYPO3\FLOW3\Error\Message();
+		#$this->flashMessageContainer->addMessage($message);
+	}
+	/**
 	 * Render action
 	 *
-	 * @param string $origin a path
+	 * @param string $origin a Git Origin
 	 * @param string $repositoryType possible values are git, svn, ter
 	 * @param string $branch
 	 * @return void
 	 */
 	public function renderAction($origin = '', $repositoryType = 'git', $branch = 'master') {
-
 		#@FLOW3\Validate $source NotEmpty -> does not work ;( @todo check why
+
 		if ($origin === '') {
-			throw new \TYPO3\Docs\Exception\InvalidArgumentException('Missing source argument', 1341838275);
+			$this->redirect('Index');
 		}
+		else {
 
-		// Register
-		$this->documentationRenderingController->addGitJobCommand($origin);
+			// Register
+			$this->documentationRenderingController->addGitJobCommand($origin);
 
-		$this->view->assign('source', $origin);
-		$this->view->assign('numberOfItems', 3);
+			$this->view->assign('source', $origin);
+			$this->view->assign('numberOfItems', '@todo: numberOfItems');
+		}
 	}
 
 	/**
 	 * @return void
 	 */
 	public function redirectAction() {
-		$this->redirect('index');
+		$this->redirect('Index');
 	}
 
 }

@@ -68,7 +68,7 @@ class GitDocumentationRenderJob extends \TYPO3\DocTools\Job\DocumentationRenderJ
 		$this->repositoryPath = FLOW3_PATH_ROOT . 'Data/Temporary/' . ltrim($repositoryPath, '/') . '/' . $repositoryName;
 		$this->repositoryName = $repositoryName;
 		$this->documentationPath = $this->repositoryPath . '/Documentation';
-		$this->buildPath = FLOW3_PATH_ROOT . 'Data/Persistent/' . ltrim($repositoryPath, '/') . '/' . $repositoryName;
+		$this->buildPath = FLOW3_PATH_ROOT . 'Data/Persistent/Typo3Documentation/' . ltrim($repositoryPath, '/') . '/' . $repositoryName;
 	}
 
 	/**
@@ -85,43 +85,57 @@ class GitDocumentationRenderJob extends \TYPO3\DocTools\Job\DocumentationRenderJ
 
 		$this->output('Fetching Source file...');
 
+		#$this->dryRun = 1;
+
+		$files = glob($this->repositoryPath . '/*');
 		// TRUE means this is a new repository
-		if (! is_dir($this->repositoryPath)) {
-			$command = "cd {$this->repositoryPath}; git clone --quiet --recursive {$this->origin} . ";
+		if (empty($files)) {
+			$command = "cd {$this->repositoryPath}; git clone --quiet --recursive {$this->origin} . 2>&1";
 			$this->run($command);
 		}
 		else {
-			$command = "cd {$this->repositoryPath}; git pull --quiet";
+			$command = "cd {$this->repositoryPath}; git pull --quiet 2>&1";
 			$this->run($command);
 
-			$command = "cd {$this->repositoryPath}; git submodule update --quiet ";
+			$command = "cd {$this->repositoryPath}; git submodule update --quiet 2>&1";
 			$this->run($command);
 		}
 
 
-		// Generate Sphinx Configuration
-		$view = new \TYPO3\Fluid\View\StandaloneView();
-		$view->setTemplatePathAndFilename('resource://TYPO3.Docs/Private/Templates/conf.py.fluid');
+		if (is_dir($this->documentationPath)) {
 
-		$view->assign('version', '1.0');
-		$view->assign('extensionName', $this->repositoryName);
-		file_put_contents($this->documentationPath . '/conf.py', $view->render());
+			// Generate Sphinx Configuration
+			$view = new \TYPO3\Fluid\View\StandaloneView();
+			$view->setTemplatePathAndFilename('resource://TYPO3.Docs/Private/Templates/conf.py.fluid');
 
-		// Generate Make Configuration
-		$view->setTemplatePathAndFilename('resource://TYPO3.Docs/Private/Templates/Makefile.fluid');
-		$view->assign('buildDirectory', $this->buildPath);
-		file_put_contents($this->documentationPath . '/Makefile', $view->render());
+			$view->assign('version', '1.0');
+			$view->assign('extensionName', $this->repositoryName);
+			file_put_contents($this->documentationPath . '/conf.py', $view->render());
 
-		// Create build directory
-		\TYPO3\FLOW3\Utility\Files::createDirectoryRecursively($this->buildPath);
+			// Generate Make Configuration
+			$view->setTemplatePathAndFilename('resource://TYPO3.Docs/Private/Templates/Makefile.fluid');
+			$view->assign('buildDirectory', $this->buildPath);
+			file_put_contents($this->documentationPath . '/Makefile', $view->render());
 
-		// First clean directory
-		$this->output('Generating Documentation for "' . $this->repositoryName . '"');
-		$command = "cd {$this->documentationPath}; make clean --quiet;";
-		$this->run($command);
-		$command = "cd {$this->documentationPath}; make html --quiet;";
-		$this->run($command);
-		$this->output("Job ended successfully!\n");
+			// Create build directory
+			\TYPO3\FLOW3\Utility\Files::createDirectoryRecursively($this->buildPath);
+
+			// First clean directory
+			$this->output('Generating documentation for "' . $this->repositoryName . '"');
+			$command = "cd {$this->documentationPath}; make clean --quiet 2>&1";
+			$this->run($command);
+			$command = "cd {$this->documentationPath}; make html --quiet 2>&1";
+			$this->run($command);
+			$message = 'OK';
+		}
+		elseif ($this->dryRun) {
+			$message = 'dry run mode, nothing executed.';
+		}
+		else {
+			$message = 'no documentation found within ' . $this->origin;
+		}
+
+		$this->output('Documentation job ended: ' . $message . PHP_EOL);
 
 		return TRUE;
 	}
@@ -164,19 +178,20 @@ class GitDocumentationRenderJob extends \TYPO3\DocTools\Job\DocumentationRenderJ
 	 *
 	 * @param string $command the command to be executed
 	 * @param boolean $run whether the command needs to be executed or simply echoed
-	 * @return void
+	 * @return array
 	 */
 	protected function run($command, $run = TRUE) {
+		$output = array();
 		if (! $this->dryRun && $run) {
 			exec($command, $output, $return);
-			if ($return !== 0) {
-				$message = 'Exception 1342444646: Something when wrong with command "' . $command . '"';
-				throw new \RuntimeException(sprintf($message, $command));
+			if (!empty($output)) {
+				$this->output(implode("\n", $output));
 			}
 		}
 		else {
 			$this->output($command);
 		}
+		return $output;
 	}
 }
 ?>
